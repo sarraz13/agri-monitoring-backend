@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -40,6 +41,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     'monitoring',
+    'ml',
 ]
 
 MIDDLEWARE = [
@@ -74,18 +76,16 @@ WSGI_APPLICATION = "agri_backend.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "agri_db",
-        "USER": "agri_user",
-        "PASSWORD": "agri_pass_123",
-        "HOST": "localhost",
-        "PORT": "5433",
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'agri_db',
+        'USER': 'agri_user',
+        'PASSWORD': 'agri_password',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
-
 
 
 REST_FRAMEWORK = {
