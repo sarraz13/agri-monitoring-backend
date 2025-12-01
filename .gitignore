@@ -1,33 +1,86 @@
-# Python
+# ============================
+# PYTHON / DJANGO
+# ============================
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
+*$py.class
 
-# SQLite (legacy)
-db.sqlite3
+# Virtual environment
+venv/
+.env/
+.env.*
+env/
+ENV/
+.venv/
 
-# Django stuff
+# Django
 *.log
 *.pot
 *.pyc
+*.sqlite3
+db.sqlite3
 
-# Env vars
-.env
+# Settings secrets (important)
 *.env
-.env.*
-venv/
-.venv/
+*.ini
+*.cfg
+*.conf
 
-# VS Code
+# ============================
+# ML / DATA FILES
+# ============================
+*.pkl
+*.joblib
+*.h5
+*.model
+*.sav
+
+# Data dumps
+data/
+datasets/
+*.csv
+*.tsv
+*.xlsx
+*.json
+*.xml
+
+# Raw sensor data
+sensor_data/
+simulator_output/
+
+# ============================
+# EDITORS / OS SPECIFIC
+# ============================
+# VSCode
 .vscode/
+.code-workspace
 
-# Compiled migrations cache
-**/migrations/__pycache__/
+# JetBrains
+.idea/
 
-# Pipenv
-Pipfile.lock
-
-# System
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ============================
+# GIT / OTHER GENERATED FILES
+# ============================
+*.bak
+*.tmp
+*.swp
+
+# Cache
+.cache/
+ipynb_checkpoints/
+
+# ============================
+# DOCKER (optional, si utilisé)
+# ============================
+docker-compose.override.yml
+docker-data/
