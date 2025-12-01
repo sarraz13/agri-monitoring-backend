@@ -1,31 +1,50 @@
-# ml/management/commands/train_model.py - VERSION SIMPLIFIÉE
+# ml/management/commands/train_model.py - VERSION SIMPLE
 from django.core.management.base import BaseCommand
-from ml.ml_model import MLModel
+import numpy as np
+from sklearn.ensemble import IsolationForest
+import joblib
+import os
 
 class Command(BaseCommand):
-    help = 'Entraîne le modèle Isolation Forest pour la détection d\'anomalies'
+    help = 'Train a simple Isolation Forest model'
     
     def handle(self, *args, **options):
-        self.stdout.write(self.style.SUCCESS('🚀 Début de l\'entraînement du modèle ML...'))
+        self.stdout.write(self.style.SUCCESS('🚀 Training ML model...'))
         
-        # Crée une instance et entraîne
-        model_instance = MLModel()
-        model_instance.train()
+        # Simple dataset
+        np.random.seed(42)
+        n_samples = 1000
         
-        self.stdout.write(self.style.SUCCESS('✅ Modèle entraîné et sauvegardé avec succès!'))
+        X = np.column_stack([
+            np.random.normal(60, 5, n_samples),   # Moisture
+            np.random.normal(24, 3, n_samples),   # Temperature
+            np.random.normal(65, 8, n_samples)    # Humidity
+        ])
         
-        # Test rapide
-        self.stdout.write("\n🧪 Test rapide:")
+        # Train
+        model = IsolationForest(
+            n_estimators=100,
+            contamination=0.1,
+            random_state=42
+        )
         
-        test_cases = [
-            (65, 24, 70, "Normal"),
-            (25, 24, 70, "Anomalie humidité"),
-            (65, 36, 70, "Anomalie température"),
+        model.fit(X)
+        
+        # Save
+        os.makedirs('models', exist_ok=True)
+        model_path = 'models/isolation_forest.pkl'
+        joblib.dump(model, model_path)
+        
+        self.stdout.write(self.style.SUCCESS(f'✅ Model saved: {model_path}'))
+        
+        # Quick test
+        self.stdout.write("\n🧪 Quick test:")
+        tests = [
+            ([65, 24, 65], "Normal"),
+            ([25, 24, 65], "Water stress"),
         ]
         
-        for m, t, h, label in test_cases:
-            is_anomaly, score = model_instance.predict(m, t, h)
-            if is_anomaly:
-                self.stdout.write(self.style.ERROR(f'   {label}: ANOMALIE (score: {score:.3f})'))
-            else:
-                self.stdout.write(self.style.SUCCESS(f'   {label}: Normal (score: {score:.3f})'))
+        for features, label in tests:
+            pred = model.predict([features])[0]
+            status = "ANOMALY" if pred == -1 else "Normal"
+            self.stdout.write(f"   {label}: {status}")

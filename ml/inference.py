@@ -1,109 +1,72 @@
-# ml/inference.py
-"""
-Interface de détection d'anomalies pour Django
-"""
-from .ml_model import ml_model
-import numpy as np
+# ml/inference.py - VERSION SIMPLE
 from django.db.models import Avg
-from monitoring.models import SensorReading
 from datetime import datetime, timedelta
+from monitoring.models import SensorReading
+
+# Import local
+try:
+    from .ml_model import ml_model
+except ImportError:
+    # Fallback si ml_model n'existe pas
+    ml_model = None
 
 class AnomalyDetector:
-    """Détecteur d'anomalies pour les parcelles"""
+    """Détecteur simplifié"""
     
     @staticmethod
     def get_plot_features(plot_id, hours_back=2):
-        """
-        Récupère les moyennes des features d'une parcelle
-        
-        Returns:
-            (moisture_avg, temp_avg, humidity_avg)
-        """
+        """Récupère les moyennes"""
         time_threshold = datetime.now() - timedelta(hours=hours_back)
         
-        # Récupère les lectures récentes
         readings = SensorReading.objects.filter(
             plot_id=plot_id,
             timestamp__gte=time_threshold
         )
         
         if not readings.exists():
-            return 60.0, 24.0, 65.0  # Valeurs par défaut
+            return 60.0, 24.0, 65.0
         
-        # Calcule les moyennes par type de capteur
-        moisture_readings = readings.filter(sensor_type='moisture')
-        temp_readings = readings.filter(sensor_type='temperature')
-        humidity_readings = readings.filter(sensor_type='humidity')
+        moisture = readings.filter(sensor_type='moisture').aggregate(Avg('value'))['value__avg'] or 60.0
+        temp = readings.filter(sensor_type='temperature').aggregate(Avg('value'))['value__avg'] or 24.0
+        humidity = readings.filter(sensor_type='humidity').aggregate(Avg('value'))['value__avg'] or 65.0
         
-        moisture_avg = moisture_readings.aggregate(Avg('value'))['value__avg'] or 60.0
-        temp_avg = temp_readings.aggregate(Avg('value'))['value__avg'] or 24.0
-        humidity_avg = humidity_readings.aggregate(Avg('value'))['value__avg'] or 65.0
-        
-        return moisture_avg, temp_avg, humidity_avg
+        return moisture, temp, humidity
     
     @staticmethod
     def detect_for_plot(plot_id):
-        """
-        Détecte une anomalie pour une parcelle spécifique
-        
-        Returns:
-            {
-                'is_anomaly': bool,
-                'score': float,
-                'moisture': float,
-                'temperature': float,
-                'humidity_air': float,
-                'anomaly_type': str or None
-            }
-        """
-        # 1. Récupère les features
-        moisture, temp, humidity = AnomalyDetector.get_plot_features(plot_id)
-        
-        # 2. Prédiction ML
-        is_anomaly, score = ml_model.predict(moisture, temp, humidity)
-        
-        # 3. Détermine le type d'anomalie
-        anomaly_type = None
-        if is_anomaly:
-            if moisture < 40:
-                anomaly_type = 'moisture_low'
-            elif moisture > 80:
-                anomaly_type = 'moisture_high'
-            elif temp < 15:
-                anomaly_type = 'temperature_low'
-            elif temp > 32:
-                anomaly_type = 'temperature_high'
-            elif humidity < 35:
-                anomaly_type = 'humidity_low'
-            elif humidity > 85:
-                anomaly_type = 'humidity_high'
+        """Détection basique"""
+        try:
+            moisture, temp, humidity = AnomalyDetector.get_plot_features(plot_id)
+            
+            # Fallback simple si pas de modèle ML
+            if ml_model is None:
+                is_anomaly = (
+                    moisture < 40 or moisture > 80 or
+                    temp < 15 or temp > 35 or
+                    humidity < 35 or humidity > 85
+                )
+                score = -0.5 if is_anomaly else 0.5
+                anomaly_type = "water_stress" if moisture < 40 else "other"
             else:
-                anomaly_type = 'unknown'
-        
-        return {
-            'is_anomaly': is_anomaly,
-            'score': score,
-            'moisture': moisture,
-            'temperature': temp,
-            'humidity_air': humidity,
-            'anomaly_type': anomaly_type
-        }
-    
-    @staticmethod
-    def check_all_plots():
-        """Vérifie toutes les parcelles pour anomalies"""
-        from monitoring.models import FieldPlot
-        
-        plots = FieldPlot.objects.all()
-        results = []
-        
-        for plot in plots:
-            result = AnomalyDetector.detect_for_plot(plot.id)
-            result['plot_id'] = plot.id
-            result['plot_name'] = plot.plot_name
-            results.append(result)
-        
-        return results
+                # Utilise le modèle ML si disponible
+                is_anomaly, score = ml_model.predict(moisture, temp, humidity)
+                anomaly_type = "detected"
+            
+            return {
+                'is_anomaly': is_anomaly,
+                'score': score,
+                'moisture': moisture,
+                'temperature': temp,
+                'humidity_air': humidity,
+                'anomaly_type': anomaly_type
+            }
+            
+        except Exception as e:
+            return {
+                'is_anomaly': False,
+                'score': 0.0,
+                'error': str(e)
+            }
 
 # Instance globale
 detector = AnomalyDetector()
