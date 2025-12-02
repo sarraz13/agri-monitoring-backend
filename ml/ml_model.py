@@ -1,22 +1,14 @@
-# ml/ml_model.py - VERSION CORRECTE COMPLÈTE
-"""
-Module principal ML - Isolation Forest avec 3 features
-"""
 import numpy as np
 from sklearn.ensemble import IsolationForest
 import joblib
 import os
-from datetime import datetime, timedelta
-from django.utils import timezone
 
 class MLModel:
-    """Gestion du modèle Isolation Forest"""
-    
-    def __init__(self, model_path='isolation_forest_3d.pkl'):
+    def __init__(self, model_path='models/isolation_forest.pkl'):
         self.model_path = model_path
         self.model = None
         self.load_model()
-    
+
     def load_model(self):
         """Charge le modèle depuis le fichier"""
         try:
@@ -30,17 +22,9 @@ class MLModel:
             print(f"❌ Erreur chargement modèle: {e}")
             self.model = None
     
-    def train(self, save_path='isolation_forest_3d.pkl'):
-        """
-        Entraîne un modèle Isolation Forest avec 3 features
-        Features: [humidité_sol, température, humidité_air]
-        VERSION SIMPLE ET GARANTIE
-        """
+    def train(self, save_path='isolation_forest.pkl'):
         print("🧠 Entraînement du modèle ML (3 features)...")
-        
-        # Version SUPER SIMPLE - pas de divisions compliquées
         np.random.seed(42)
-        
         # 1. Données normales
         n_normal = 800
         X_normal = np.column_stack([
@@ -48,7 +32,6 @@ class MLModel:
             np.random.normal(24, 3, n_normal),    # Température
             np.random.normal(65, 8, n_normal)     # Humidité air
         ])
-        
         # 2. Données anormales
         n_anomaly = 200
         X_anomaly = np.column_stack([
@@ -56,14 +39,11 @@ class MLModel:
             np.random.uniform(32, 40, n_anomaly),    # Température haute
             np.random.uniform(20, 40, n_anomaly)     # Humidité air basse
         ])
-        
         # 3. Combine
         X_train = np.vstack([X_normal, X_anomaly])
         np.random.shuffle(X_train)
-        
         print(f"📊 Dataset: {X_train.shape[0]} échantillons")
         print(f"   Normales: {n_normal}, Anomalies: {n_anomaly}")
-        
         # 4. Entraînement
         self.model = IsolationForest(
             n_estimators=100,
@@ -71,20 +51,15 @@ class MLModel:
             random_state=42,
             n_jobs=-1
         )
-        
         print("⏳ Entraînement...")
         self.model.fit(X_train)
-        
         # 5. Sauvegarde
         os.makedirs(os.path.dirname(save_path) or '.', exist_ok=True)
         joblib.dump(self.model, save_path)
-        
         print(f"✅ Modèle sauvegardé: {save_path}")
         print(f"   Features attendues: {self.model.n_features_in_}")
-        
         # 6. Validation
         self._validate_model()
-        
         return self.model
     
     def _validate_model(self):
@@ -114,12 +89,6 @@ class MLModel:
                 print(f"   {label:30} → ERREUR: {e}")
     
     def predict(self, moisture, temperature, humidity_air):
-        """
-        Prédit si les 3 features forment une anomalie
-        
-        Returns:
-            (is_anomaly, score)
-        """
         if self.model is None:
             # Fallback: seuils simples
             is_anomaly = (

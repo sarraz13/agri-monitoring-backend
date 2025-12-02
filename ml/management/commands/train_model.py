@@ -7,27 +7,22 @@ import os
 
 class Command(BaseCommand):
     help = 'Train a simple Isolation Forest model'
-    
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS('🚀 Training ML model...'))
-        
         # Simple dataset
         np.random.seed(42)
         n_samples = 1000
-        
         X = np.column_stack([
             np.random.normal(60, 5, n_samples),   # Moisture
             np.random.normal(24, 3, n_samples),   # Temperature
             np.random.normal(65, 8, n_samples)    # Humidity
         ])
-        
         # Train
         model = IsolationForest(
             n_estimators=100,
             contamination=0.1,
             random_state=42
         )
-        
         model.fit(X)
         
         # Save
@@ -36,6 +31,8 @@ class Command(BaseCommand):
         joblib.dump(model, model_path)
         
         self.stdout.write(self.style.SUCCESS(f'✅ Model saved: {model_path}'))
+        
+
         
         # Quick test
         self.stdout.write("\n🧪 Quick test:")

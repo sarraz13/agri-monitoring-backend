@@ -1,169 +1,163 @@
 """
-Simulateur avec credentials corrects
+Simulateur agricole avec authentification JWT
+Envoyé de données aux API Django
 """
 import requests
 import random
 import time
-from datetime import datetime, timedelta
+from datetime import timedelta
+from django.utils import timezone
 
-class CorrectSimulator:
+class AgriSimulator:
     def __init__(self, base_url="http://localhost:8000"):
         self.base_url = base_url
         self.token = None
+        self.plots = [1, 2, 3]  # IDs des parcelles par défaut
         
-    def login(self):
-        """Essayez plusieurs combinaisons"""
-        credentials = [
-            ("sarra", "sarour1234"),
-            ("admin", "admin123"),
-            ("admin", "password"),
-            ("test", "test123")
-        ]
-        
-        for username, password in credentials:
-            print(f"🔐 Essai avec {username}...")
+    def login(self, username="sarra", password="sarour1234"):
+        """Authentification JWT"""
+        try:
+            response = requests.post(
+                f"{self.base_url}/api/auth/login/",
+                json={"username": username, "password": password},
+                timeout=5
+            )
             
-            try:
-                response = requests.post(
-                    f"{self.base_url}/api/auth/login/",
-                    json={"username": username, "password": password},
-                    timeout=5
-                )
+            if response.status_code == 200:
+                self.token = response.json()['access']
+                print(f"✅ Authentifié: {username}")
+                return True
                 
-                if response.status_code == 200:
-                    self.token = response.json()['access']
-                    print(f"✅ Connecté en tant que {username}")
-                    return True
-                else:
-                    print(f"   ❌ {response.status_code}")
-                    
-            except Exception as e:
-                print(f"   ❌ Erreur: {e}")
-        
-        print("\n❌ Aucun login n'a fonctionné.")
-        print("\n🎯 Créez un superuser:")
-        print("   python manage.py createsuperuser")
-        print("   → Username: admin")
-        print("   → Password: admin123")
+        except requests.exceptions.ConnectionError:
+            print("❌ Impossible de se connecter au serveur")
+        except Exception as e:
+            print(f"❌ Erreur: {e}")
+            
         return False
     
-    def quick_test(self):
-        """Test rapide"""
-        print("\n🧪 Test rapide...")
-        
-        # 1. Test de connexion
-        if not self.login():
-            return
-        
-        # 2. Test envoi de données
-        headers = {
-            'Authorization': f'Bearer {self.token}',
-            'Content-Type': 'application/json'
+    def generate_sensor_value(self, sensor_type):
+        """Génère une valeur réaliste selon le type de capteur"""
+        ranges = {
+            "moisture": (45, 75),      # Humidité sol normale
+            "temperature": (18, 28),   # Température normale
+            "humidity": (45, 75)       # Humidité air normale
         }
-        
-        # Génère des données de test
-        for i in range(3):
-            data = {
-                "timestamp": datetime.now().isoformat(),
-                "plot": i + 1,  # Parcelle 1, 2, 3
-                "sensor_type": "moisture",
-                "value": round(random.uniform(45, 75), 2),
-                "source": "quick_test"
-            }
-            
-            try:
-                response = requests.post(
-                    f"{self.base_url}/api/sensor-readings/",
-                    json=data,
-                    headers=headers,
-                    timeout=5
-                )
-                
-                if response.status_code in [200, 201]:
-                    print(f"✅ Parcelle {i+1}: {data['value']}%")
-                else:
-                    print(f"❌ Erreur {response.status_code}: {response.text[:50]}")
-                    
-            except Exception as e:
-                print(f"❌ Exception: {e}")
-            
-            time.sleep(1)
-        
-        print("\n✅ Test terminé!")
+        min_val, max_val = ranges.get(sensor_type, (0, 100))
+        return round(random.uniform(min_val, max_val), 2)
     
-    def run_simulation(self):
-        """Simulation simple"""
-        print("\n🚀 Simulation simple (2 minutes)...")
+    def send_reading(self, plot_id, sensor_type, value=None):
+        """Envoie une lecture unique"""
+        if value is None:
+            value = self.generate_sensor_value(sensor_type)
         
-        if not self.login():
-            return
+        data = {
+            "plot": plot_id,
+            "sensor_type": sensor_type,
+            "value": value,
+            "timestamp": timezone.now().isoformat(),
+            "source": "agri_simulator"
+        }
         
         headers = {
             'Authorization': f'Bearer {self.token}',
             'Content-Type': 'application/json'
         }
         
-        end_time = datetime.now() + timedelta(minutes=2)
+        try:
+            response = requests.post(
+                f"{self.base_url}/api/sensor-readings/",
+                json=data,
+                headers=headers,
+                timeout=5
+            )
+            return response.status_code in [200, 201]
+        except Exception:
+            return False
+    
+    def quick_test(self, count=3):
+        """Test rapide"""
+        if not self.login():
+            return False
+        
+        print(f"\n🧪 Test ({count} lectures par parcelle)...")
+        success = 0
+        total = len(self.plots) * 3  # 3 capteurs par parcelle
+        
+        for plot_id in self.plots:
+            for sensor in ["moisture", "temperature", "humidity"]:
+                if self.send_reading(plot_id, sensor):
+                    success += 1
+                time.sleep(0.3)  # Petit délai
+        
+        print(f"✅ {success}/{total} lectures envoyées")
+        return success > 0
+    
+    def run_simulation(self, duration_minutes=2):
+        """Simulation continue"""
+        if not self.login():
+            return
+        
+        print(f"\n🚀 Simulation ({duration_minutes} minutes)...")
+        end_time = timezone.now() + timedelta(minutes=duration_minutes)
         count = 0
         
         try:
-            while datetime.now() < end_time:
-                for plot_id in [1, 2, 3]:
-                    for sensor_type in ["moisture", "temperature", "humidity"]:
-                        # Valeurs réalistes
-                        if sensor_type == "moisture":
-                            value = random.uniform(45, 75)
-                        elif sensor_type == "temperature":
-                            value = random.uniform(18, 28)
-                        else:  # humidity
-                            value = random.uniform(45, 75)
-                        
-                        data = {
-                            "timestamp": datetime.now().isoformat(),
-                            "plot": plot_id,
-                            "sensor_type": sensor_type,
-                            "value": round(value, 2),
-                            "source": "simple_sim"
-                        }
-                        
-                        response = requests.post(
-                            f"{self.base_url}/api/sensor-readings/",
-                            json=data,
-                            headers=headers,
-                            timeout=5
-                        )
-                        
-                        if response.status_code in [200, 201]:
+            while timezone.now() < end_time:
+                for plot_id in self.plots:
+                    for sensor in ["moisture", "temperature", "humidity"]:
+                        if self.send_reading(plot_id, sensor):
                             count += 1
-                            if count % 5 == 0:  # Log toutes les 5 lectures
-                                print(f"📊 {count} lectures envoyées...")
                 
-                time.sleep(10)  # Toutes les 10 secondes
+                if count % 9 == 0:  # Log tous les cycles complets
+                    print(f"   📊 {count} lectures...")
+                
+                time.sleep(10)  # Nouveau cycle toutes les 10s
                 
         except KeyboardInterrupt:
-            print("\n⏹️  Arrêté")
+            print("\n⏹️ Arrêt manuel")
         
-        print(f"\n✅ {count} lectures envoyées au total!")
+        print(f"\n✅ Simulation terminée: {count} lectures")
+        return count
+    
+    def inject_anomaly(self, plot_id=1, moisture=25, temp=32, humidity=35):
+        """Injecte une anomalie spécifique (test ML)"""
+        if not self.login():
+            return False
+        
+        print(f"\n⚠️  Injection anomalie (Parcelle {plot_id})...")
+        
+        sensors = [
+            ("moisture", moisture),
+            ("temperature", temp),
+            ("humidity", humidity)
+        ]
+        
+        success = 0
+        for sensor_type, value in sensors:
+            if self.send_reading(plot_id, sensor_type, value):
+                success += 1
+            time.sleep(0.5)
+        
+        if success == 3:
+            print(f"✅ Anomalie injectée: {moisture}% sol, {temp}°C, {humidity}% air")
+        else:
+            print("❌ Échec injection anomalie")
+        
+        return success == 3
 
 def main():
-    print("="*60)
-    print("🌾 SIMULATEUR AGRICOLE - CREDENTIALS CORRECTS")
-    print("="*60)
+    """Menu principal"""
+    print("="*50)
+    print("🌾 SIMULATEUR AGRI-MONITORING")
+    print("="*50)
     
-    url = "http://localhost:8000"
+    simulator = AgriSimulator()
     
-    print(f"\n🔗 URL: {url}")
-    print("📋 Essai des combinaisons:")
-    print("   1. sarra / sarour1234")
-    print("   2. admin / admin123")
-    print("   3. admin / password")
-    print("   4. test / test123")
-    
-    simulator = CorrectSimulator(url)
-    
-    print("\n1. 🧪 Test rapide (3 lectures)")
-    print("2. 🚀 Simulation (2 minutes)")
-    print("3. 🔐 Test login seulement")
+    print("\nOptions:")
+    print("1. Test rapide (9 lectures)")
+    print("2. Simulation continue (2 min)")
+    print("3. Injecter anomalie test")
+    print("4. Test connexion seulement")
     
     choice = input("\nChoix [1]: ").strip() or "1"
     
@@ -172,22 +166,11 @@ def main():
     elif choice == "2":
         simulator.run_simulation()
     elif choice == "3":
+        simulator.inject_anomaly()
+    elif choice == "4":
         simulator.login()
     else:
-        print("❌ Choix invalide")
-    
-    print("\n" + "="*60)
-    print("🔧 SI RIEN NE MARCHE:")
-    print("="*60)
-    print("1. Créez un superuser:")
-    print("   python manage.py createsuperuser")
-    print("   → Username: testuser")
-    print("   → Password: testpass123")
-    
-    print("\n2. Testez manuellement:")
-    print("   curl -X POST http://localhost:8000/api/auth/login/ \\")
-    print("        -H \"Content-Type: application/json\" \\")
-    print("        -d '{\"username\":\"testuser\",\"password\":\"testpass123\"}'")
+        print("❌ Option invalide")
 
 if __name__ == "__main__":
     main()

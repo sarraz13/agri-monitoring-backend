@@ -202,7 +202,7 @@ def cleanup_old_readings(sender, instance, created, **kwargs):
                 deleted_count, _ = old_readings.delete()
                 
                 logger.info(
-                    f"🧹 Nettoyage automatique - Parcelle {plot.id}: "
+                    f"Nettoyage automatique - Parcelle {plot.id}: "
                     f"supprimé {deleted_count} anciennes lectures"
                 )
                 
