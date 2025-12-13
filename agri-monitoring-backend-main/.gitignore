@@ -84,10 +84,3 @@ ipynb_checkpoints/
 # ============================
 docker-compose.override.yml
 docker-data/
-"agri_backend/" 
-"ml/" 
-"monitoring/" 
-"simulator/" 
-"*.py" 
-"requirements.txt" 
-"manage.py" 

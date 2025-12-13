@@ -1,0 +1,18 @@
+<nav class="navbar-minimal">
+  <div class="nav-logo">
+    <span class="logo-text">Agri</span>
+  </div>
+  
+  <div class="nav-links">
+    <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">
+      <span class="link-text">Dashboard</span>
+    </a>
+    <a routerLink="/alerts" routerLinkActive="active" class="nav-link">
+      <span class="link-text">Alerts</span>
+    </a>
+  </div>
+  
+  <button class="nav-logout" (click)="logout()">
+    <span class="logout-text">Logout</span>
+  </button>
+</nav>

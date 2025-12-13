@@ -1,0 +1,158 @@
+<div class="alerts-soft">
+
+  <!-- Header -->
+  <header class="header-soft">
+    <button class="btn-text" (click)="goBack()">← Dashboard</button>
+    <h1>Alerts</h1>
+    <button class="btn-text" (click)="logout()">Logout</button>
+  </header>
+
+  <!-- Auto-refresh indicator -->
+  <div class="refresh-indicator" *ngIf="refreshCountdown > 0">
+    <span>Auto-refresh in {{ refreshCountdown }}s</span>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-soft">
+    <div class="stat-box high" [class.active]="selectedFilter === 'high'"
+         (click)="filterBy('high')">
+      <div class="stat-value">{{ getCriticalCount() }}</div>
+      <div class="stat-label">Critical</div>
+    </div>
+
+    <div class="stat-box medium" [class.active]="selectedFilter === 'medium'"
+         (click)="filterBy('medium')">
+      <div class="stat-value">{{ getWarningCount() }}</div>
+      <div class="stat-label">Warning</div>
+    </div>
+
+    <div class="stat-box low" [class.active]="selectedFilter === 'low'"
+         (click)="filterBy('low')">
+      <div class="stat-value">{{ getInfoCount() }}</div>
+      <div class="stat-label">Low</div>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filters-soft">
+    <button class="filter-chip" [class.active]="selectedFilter === 'all'" (click)="filterBy('all')">
+      All ({{ anomalies.length }})
+    </button>
+    <button class="filter-chip" [class.active]="selectedFilter === 'high'" (click)="filterBy('high')">
+      Critical ({{ getCountBySeverity('high') }})
+    </button>
+    <button class="filter-chip" [class.active]="selectedFilter === 'medium'" (click)="filterBy('medium')">
+      Warning ({{ getCountBySeverity('medium') }})
+    </button>
+    <button class="filter-chip" [class.active]="selectedFilter === 'low'" (click)="filterBy('low')">
+      Low ({{ getCountBySeverity('low') }})
+    </button>
+  </div>
+
+  <!-- List -->
+  <div class="list-soft">
+
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="loading-soft">
+      <div class="spinner-soft"></div>
+      <p>Loading alerts...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="!isLoading && errorMessage" class="error-soft">
+      <p>{{ errorMessage }}</p>
+      <button class="btn-retry" (click)="loadAnomalies()">Retry</button>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!isLoading && !errorMessage && getFilteredAnomalies().length === 0" class="empty-soft">
+      <div class="empty-icon">✅</div>
+      <p>No active alerts</p>
+      <p class="empty-subtext">All systems are operating normally</p>
+    </div>
+
+    <!-- Anomalies List -->
+    <div *ngIf="!isLoading && getFilteredAnomalies().length > 0">
+      @for (anomaly of getFilteredAnomalies(); track anomaly.id) {
+
+        <div class="card-soft" [class]="'sev-' + anomaly.severity">
+
+          <div class="row-soft card-head">
+            <span class="title-soft">{{ anomaly.anomaly_type }}</span>
+            <span class="time-soft">{{ formatDate(anomaly.detected_at) }}</span>
+          </div>
+
+          <div class="row-soft info-soft">
+            <span class="label-soft">Field Plot:</span>
+            <span>{{ anomaly.field_plot_name || 'Unknown Plot' }}</span>
+          </div>
+
+          <div class="tags-soft">
+            <span class="tag-soft" [class]="'tag-' + anomaly.severity">
+              {{ getSeverityLabel(anomaly.severity) }}
+            </span>
+
+            <span class="tag-soft grey">
+              {{ (anomaly.confidence_score * 100).toFixed(0) }}%
+            </span>
+
+            <span class="tag-soft" [class.resolved]="anomaly.resolved">
+              {{ anomaly.resolved ? 'Resolved' : 'Active' }}
+            </span>
+          </div>
+
+          <!-- ✅ CLEAN RECOMMENDATION SECTION -->
+          <div class="rec-soft">
+
+            <!-- Loading -->
+            @if (anomaly.loadingRecommendation) {
+              <div class="loading-recommendation">
+                <div class="spinner-small"></div>
+                <span>Generating AI recommendation...</span>
+              </div>
+            }
+
+            <!-- Has Recommendation - SHOW DIRECTLY -->
+            @else if (anomaly.agent_recommendation) {
+              <div class="recommendation-display">
+                <div class="recommendation-header">
+                  <span class="recommendation-label">AI Recommendation</span>
+                  <button class="btn-regenerate" (click)="regenerateRecommendation(anomaly)">
+                    Regenerate
+                  </button>
+                </div>
+                <p class="recommendation-text-large">{{ getRecommendationAction(anomaly) }}</p>
+                <div class="recommendation-explanation" *ngIf="getRecommendationExplanation(anomaly)">
+                  {{ getRecommendationExplanation(anomaly) }}
+                </div>
+                <div class="recommendation-footer">
+                  <span class="confidence-badge" [class]="'confidence-' + getConfidenceLevel(anomaly)">
+                    {{ (getRecommendationConfidence(anomaly) * 100).toFixed(0) }}% confidence
+                  </span>
+                </div>
+              </div>
+            }
+
+            <!-- No Recommendation - Simple Button -->
+            @else {
+              <div class="no-recommendation">
+                <button class="btn-get-recommendation" (click)="generateRecommendation(anomaly)">
+                  Get AI Recommendation
+                </button>
+              </div>
+            }
+
+          </div>
+
+          <div class="actions-soft">
+            <button class="btn-outline-soft" (click)="viewPlotDetails(anomaly)">
+              View Field Plot
+            </button>
+          </div>
+
+        </div>
+      }
+    </div>
+  </div>
+
+</div>

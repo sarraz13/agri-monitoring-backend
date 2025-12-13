@@ -1,0 +1,81 @@
+<div class="dashboard-clean">
+
+  <!-- Header -->
+  <header class="dash-header">
+    <div class="header-title">
+      <h1>Dashboard</h1>
+      <div class="refresh-indicator" *ngIf="refreshCountdown > 0">{{ refreshCountdown }}s</div>
+    </div>
+    <div class="header-nav">
+      <button class="nav-btn" (click)="showAlerts()">Alerts</button>
+      <button class="nav-btn logout" (click)="logout()">Logout</button>
+    </div>
+  </header>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-value">{{ stats.total_farms }}</div><div class="stat-label">Farms</div></div>
+    <div class="stat-box"><div class="stat-value">{{ stats.total_plots }}</div><div class="stat-label">Field Plots</div></div>
+    <div class="stat-box"><div class="stat-value">{{ stats.total_anomalies }}</div><div class="stat-label">Anomalies</div></div>
+    <div class="stat-box critical"><div class="stat-value">{{ stats.active_alerts }}</div><div class="stat-label">Alerts</div></div>
+  </div>
+
+  <!-- Chart -->
+  <div class="chart-section" *ngIf="sensorReadings.length > 0">
+    <h3 class="section-title">Recent Sensor Readings</h3>
+    <div class="chart-tabs">
+      <button class="chart-tab" [class.active]="activeChart === 'moisture'" (click)="setActiveChart('moisture')">Moisture</button>
+      <button class="chart-tab" [class.active]="activeChart === 'temperature'" (click)="setActiveChart('temperature')">Temperature</button>
+      <button class="chart-tab" [class.active]="activeChart === 'humidity'" (click)="setActiveChart('humidity')">Humidity</button>
+    </div>
+    <div class="chart-container">
+      <canvas [id]="activeChart + 'Chart'"></canvas>
+    </div>
+  </div>
+
+  <!-- Plots -->
+  <div class="section">
+    <h3 class="section-title">Field Plots ({{ plots.length }})</h3>
+    <div class="plots-list">
+      <div class="plot-card" *ngFor="let plot of plots" (click)="viewPlotDetails(plot.id)">
+        <div class="plot-info">
+          <div class="plot-name">{{ plot.crop_variety || 'Unnamed Plot' }}</div>
+          <div class="plot-meta">
+            <span>Plot ID: {{ plot.id }}</span>
+            <span>•</span>
+            <span>{{ plot.anomaly_count }} anomal{{ plot.anomaly_count !== 1 ? 'ies' : 'y' }}</span>
+          </div>
+        </div>
+        <div class="plot-status" [class]="plot.status">
+          {{ plot.status === 'alert' ? 'Alert' : plot.status === 'warning' ? 'Warning' : 'Normal' }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Anomalies -->
+  <div class="section">
+    <h3 class="section-title">Recent Anomalies ({{ recentAnomalies.length }})</h3>
+    <div class="anomalies-list">
+      <div class="anomaly-card" *ngFor="let anomaly of recentAnomalies; trackBy: trackByAnomalyId" [class]="'sev-' + anomaly.severity">
+        <div class="anomaly-head">
+          <div class="anomaly-type">{{ anomaly.anomaly_type }}</div>
+          <div class="anomaly-time">{{ formatDate(anomaly.detected_at) }}</div>
+        </div>
+        <div class="anomaly-meta">
+          <span class="anomaly-plot">{{ anomaly.field_plot_name }}</span>
+          <span class="sev-dot" [class]="'dot-' + anomaly.severity"></span>
+          <span class="confidence">{{ (anomaly.confidence_score * 100).toFixed(0) }}%</span>
+        </div>
+        <div class="anomaly-rec" *ngIf="anomaly.agent_recommendation">
+          <div class="rec-title">Recommendation:</div>
+          <div class="rec-action">{{ anomaly.agent_recommendation }}</div>
+        </div>
+        <button class="rec-btn" (click)="generateRecommendation(anomaly.id)" *ngIf="!anomaly.agent_recommendation">
+          Generate Recommendation
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

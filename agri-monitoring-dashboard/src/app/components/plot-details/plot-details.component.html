@@ -1,0 +1,189 @@
+<div class="plot-details-minimal">
+  <!-- Minimal Header -->
+  <header class="details-header">
+    <button class="back-btn-minimal" (click)="goBack()">← Dashboard</button>
+
+    <div class="header-title">
+      <h1>{{ plot?.crop_variety || 'Plot Details' }}</h1>
+      <div class="header-status" [class]="'status-' + (plot?.status || 'normal')">
+        {{ getStatusText(plot?.status) }}
+      </div>
+    </div>
+
+    <button class="logout-btn-minimal" (click)="logout()">Logout</button>
+  </header>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-minimal">
+    <div class="spinner-minimal"></div>
+    <p>Loading Plot Data...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !loading" class="error-minimal">
+    <p>{{ error }}</p>
+    <button class="btn-retry" (click)="loadPlotData()">Try Again</button>
+  </div>
+
+  <!-- Content -->
+  <div *ngIf="!loading && plot" class="content-minimal">
+
+    <!-- Plot Summary -->
+    <div class="plot-summary-minimal">
+      <div class="plot-meta-minimal">
+        <span class="meta-item">Plot ID: {{ plot.id }}</span>
+        <span class="meta-separator">•</span>
+        <span class="meta-item">{{ plot.anomaly_count }} anomal{{ plot.anomaly_count !== 1 ? 'ies' : 'y' }}</span>
+      </div>
+    </div>
+
+    <!-- Chart Section -->
+    <div *ngIf="sensorReadings.length > 0" class="chart-section-minimal">
+      <div class="chart-toggle-minimal">
+        <button class="chart-tab" [class.active]="activeChart === 'moisture'" (click)="setActiveChart('moisture')">Moisture</button>
+        <button class="chart-tab" [class.active]="activeChart === 'temperature'" (click)="setActiveChart('temperature')">Temperature</button>
+        <button class="chart-tab" [class.active]="activeChart === 'humidity'" (click)="setActiveChart('humidity')">Humidity</button>
+      </div>
+
+      <div class="chart-container-minimal">
+        <canvas id="activeChart"></canvas>
+        <div class="chart-value-minimal">
+          {{ getCurrentValue(activeChart) }} {{ activeChart === 'temperature' ? '°C' : '%' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- No Sensor Data -->
+    <div *ngIf="sensorReadings.length === 0 && !loading" class="empty-state-minimal">
+      <div class="empty-icon">📊</div>
+      <p>No sensor data available for this plot</p>
+    </div>
+
+    <!-- Anomalies -->
+    <div *ngIf="anomalies.length > 0" class="section-minimal">
+      <h3 class="section-title">Anomalies ({{ anomalies.length }})</h3>
+
+      <div class="anomalies-list-minimal">
+        <div *ngFor="let anomaly of anomalies; trackBy: trackByAnomalyId"
+             class="anomaly-item-minimal"
+             [class.selected]="selectedAnomaly?.id === anomaly.id"
+             (click)="selectAnomaly(anomaly)">
+          <div class="anomaly-header-minimal">
+            <div class="anomaly-type-minimal">{{ anomaly.anomaly_type }}</div>
+            <div class="severity-badge-minimal" [class]="'severity-' + anomaly.severity">
+              {{ anomaly.severity }}
+            </div>
+          </div>
+          <div class="anomaly-meta-minimal">
+            <span class="anomaly-time-minimal">{{ formatDate(anomaly.detected_at) }}</span>
+            <span class="confidence-minimal">{{ (anomaly.confidence_score * 100).toFixed(0) }}%</span>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+
+    <!-- Selected Anomaly Details -->
+    <div *ngIf="selectedAnomaly" class="selected-anomaly-minimal">
+      <h3 class="section-title">Selected Anomaly Details</h3>
+      
+      <div class="anomaly-details-minimal">
+        <div class="detail-row">
+          <span class="detail-label">Type:</span>
+          <span class="detail-value">{{ selectedAnomaly.anomaly_type }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Severity:</span>
+          <span class="detail-value severity-badge-minimal" [class]="'severity-' + selectedAnomaly.severity">
+            {{ selectedAnomaly.severity }}
+          </span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Detected:</span>
+          <span class="detail-value">{{ formatDate(selectedAnomaly.detected_at) }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Confidence:</span>
+          <span class="detail-value">{{ (selectedAnomaly.confidence_score * 100).toFixed(0) }}%</span>
+        </div>
+      </div>
+
+      <!-- Recommendation Section -->
+      <div class="recommendation-section-minimal">
+        <h3 class="section-title">AI Recommendation</h3>
+        
+        <!-- Loading State -->
+        <div *ngIf="selectedAnomaly.loadingRecommendation" class="loading-recommendation-minimal">
+          <div class="small-spinner"></div>
+          <span>AI Agent is analyzing...</span>
+        </div>
+
+        <!-- Has Recommendation -->
+        <div *ngIf="!selectedAnomaly.loadingRecommendation && selectedAnomaly.agent_recommendation" 
+             class="recommendation-content-minimal">
+          
+          <div class="recommendation-action-minimal">
+            <strong>Recommended Action:</strong> {{ selectedAnomaly.agent_recommendation.recommended_action }}
+          </div>
+          
+          <div *ngIf="selectedAnomaly.agent_recommendation.explanation_text" 
+               class="recommendation-explanation-minimal">
+            <strong>Explanation:</strong> {{ selectedAnomaly.agent_recommendation.explanation_text }}
+          </div>
+          
+          <div *ngIf="selectedAnomaly.agent_recommendation.confidence" 
+               class="recommendation-confidence-minimal">
+            <strong>AI Confidence:</strong> {{ (selectedAnomaly.agent_recommendation.confidence * 100).toFixed(0) }}%
+          </div>
+        </div>
+
+        <!-- No Recommendation Yet -->
+        <div *ngIf="!selectedAnomaly.loadingRecommendation && !selectedAnomaly.agent_recommendation" 
+             class="no-recommendation-minimal">
+          <p>No AI recommendation available yet.</p>
+          <p class="empty-subtext">Click "Get AI Recommendation" to generate one.</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="action-buttons-minimal">
+        <button class="btn-generate-minimal" 
+                (click)="generateRecommendation()"
+                [disabled]="selectedAnomaly.loadingRecommendation">
+          {{ selectedAnomaly.loadingRecommendation ? 'Generating...' : 'Get AI Recommendation' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- No anomalies -->
+    <div *ngIf="anomalies.length === 0 && !loading" class="empty-state-minimal">
+      <div class="empty-icon">✅</div>
+      <p>No anomalies detected</p>
+      <p class="empty-subtext">This plot is operating normally</p>
+    </div>
+
+    <!-- Stats -->
+    <div *ngIf="sensorReadings.length > 0" class="section-minimal">
+      <h3 class="section-title">Statistics</h3>
+      <div class="stats-grid-minimal">
+        <div class="stat-item-minimal">
+          <div class="stat-value-minimal">{{ sensorReadings.length }}</div>
+          <div class="stat-label-minimal">Readings</div>
+        </div>
+        <div class="stat-item-minimal">
+          <div class="stat-value-minimal">{{ getAverage('moisture') }}%</div>
+          <div class="stat-label-minimal">Avg Moisture</div>
+        </div>
+        <div class="stat-item-minimal">
+          <div class="stat-value-minimal">{{ getAverage('temperature') }}°C</div>
+          <div class="stat-label-minimal">Avg Temp</div>
+        </div>
+        <div class="stat-item-minimal">
+          <div class="stat-value-minimal">{{ getAverage('humidity') }}%</div>
+          <div class="stat-label-minimal">Avg Humidity</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
