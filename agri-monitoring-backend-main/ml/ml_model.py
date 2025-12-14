@@ -4,8 +4,13 @@ import joblib
 import os
 
 class MLModel:
-    def __init__(self, model_path='models/isolation_forest.pkl'):
-        self.model_path = model_path
+    def __init__(self, model_path=None):
+        if model_path is None:
+            # Go up from ml/ to project root, then to models/
+            BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            self.model_path = os.path.join(BASE_DIR, 'models', 'isolation_forest.pkl')
+        else:
+            self.model_path = model_path
         self.model = None
         self.load_model()
 

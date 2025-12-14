@@ -5,5 +5,6 @@ class MonitoringConfig(AppConfig):
     name = 'monitoring'
     
     def ready(self):
-        # Importe les signaux pour les activer
+        # Import signals to register them
         import monitoring.signals
+        print("✅ Signals registered for automatic anomaly detection")
