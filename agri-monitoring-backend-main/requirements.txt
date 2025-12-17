@@ -1,21 +1,23 @@
-# Django & REST Framework
-Django>=5.0
-djangorestframework>=3.15
-djangorestframework-simplejwt>=5.3
+# Web & API
+Django==5.1
+djangorestframework==3.15.2
+djangorestframework-simplejwt==5.3.1
+gunicorn==23.0.0
+django-cors-headers==4.3.1
 
 # Database
-psycopg2-binary>=2.9.9
-# ou si vous avez des problèmes avec psycopg2-binary:
-psycopg2>=2.9.9
+psycopg2-binary==2.9.11
+dj-database-url==2.1.0
 
-# Environnement & Développement
-python-dotenv>=1.0
-# Pour le simulateur (Membre 2)
-scikit-learn
-requests>=2.31.0
-numpy>=1.24.0
-pandas>=2.0.0  # Optionnel pour ML plus tard
+# Environment
+python-dotenv==1.0.1
+requests==2.32.3
 
-# Outils de développement
-black>=24.0  # Formatteur de code
-pylint-django>=2.5  # Linter
+# Data / ML
+numpy==1.26.4
+pandas==2.2.2
+scikit-learn==1.5.2
+
+# Development tools
+black==24.8.0
+pylint-django==2.5.5

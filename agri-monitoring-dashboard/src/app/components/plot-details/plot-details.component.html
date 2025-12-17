@@ -145,15 +145,6 @@
         </div>
       </div>
 
-      <!-- Action Buttons -->
-      <div class="action-buttons-minimal">
-        <button class="btn-generate-minimal" 
-                (click)="generateRecommendation()"
-                [disabled]="selectedAnomaly.loadingRecommendation">
-          {{ selectedAnomaly.loadingRecommendation ? 'Generating...' : 'Get AI Recommendation' }}
-        </button>
-      </div>
-    </div>
 
     <!-- No anomalies -->
     <div *ngIf="anomalies.length === 0 && !loading" class="empty-state-minimal">
