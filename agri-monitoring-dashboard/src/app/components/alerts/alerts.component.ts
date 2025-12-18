@@ -332,19 +332,19 @@ export class AlertsComponent implements OnInit, OnDestroy {
   }
 
   viewPlotDetails(anomaly: any): void {
-    let plotId: number | null = null;
+    console.log('DEBUG: Anomaly object:', anomaly);
     
-    // Extract plot ID from field_plot_name or use default
-    if (anomaly.field_plot_name) {
-      const match = anomaly.field_plot_name.match(/\d+/);
-      if (match) {
-        plotId = parseInt(match[0], 10);
-      }
+    // Get plot ID from the anomaly
+    const plotId = anomaly.plot || anomaly.plotId || anomaly.plot_id;
+    
+    if (!plotId || isNaN(plotId)) {
+      console.error('No valid plot ID found in anomaly:', anomaly);
+      alert('Cannot view plot: Plot information is missing');
+      return;
     }
     
-    // Navigate to plot details
-    const id = plotId && !isNaN(plotId) ? plotId : 1;
-    this.router.navigate(['/plot-details', id]);
+    console.log('Navigating to plot:', plotId);
+    this.router.navigate(['/plot-details', plotId]);
   }
 
   logout(): void {

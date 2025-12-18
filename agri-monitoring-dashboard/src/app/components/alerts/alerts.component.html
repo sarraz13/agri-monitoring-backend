@@ -82,9 +82,9 @@
             <span class="time-soft">{{ formatDate(anomaly.detected_at) }}</span>
           </div>
 
-          <div class="row-soft info-soft">
-            <span class="label-soft">Field Plot:</span>
-            <span>{{ anomaly.field_plot_name || 'Unknown Plot' }}</span>
+          <div class="info-soft">
+            <span class="label-soft">Field Plot:&nbsp; </span>
+            <span>{{ anomaly.plot?.id || anomaly.plot || 'Unknown' }}</span>
           </div>
 
           <div class="tags-soft">

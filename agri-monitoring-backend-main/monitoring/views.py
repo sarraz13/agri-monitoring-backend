@@ -304,7 +304,7 @@ class AnomalyEventViewSet(viewsets.ModelViewSet):
 
     def list(self, request):
         """Retourne les anomalies, optionnellement filtrées par parcelle"""
-        field_plot_id = request.query_params.get('field_plot', None)
+        field_plot_id = self.request.query_params.get('field_plot', None)
         
         # Start with filtered queryset
         anomalies = self.get_queryset()
@@ -326,6 +326,7 @@ class AnomalyEventViewSet(viewsets.ModelViewSet):
             
             # FIXED: Safe access to plot and crop_variety
             field_plot_name = 'Unknown'
+            plot_id = None  # ADD THIS
             try:
                 if hasattr(anomaly, 'plot') and anomaly.plot:
                     # Try to get crop_variety, fall back to name, fall back to id
@@ -335,6 +336,8 @@ class AnomalyEventViewSet(viewsets.ModelViewSet):
                         field_plot_name = anomaly.plot.name
                     else:
                         field_plot_name = f'Plot {anomaly.plot.id}'
+                    
+                    plot_id = anomaly.plot.id  # ADD THIS
             except:
                 pass
             
@@ -345,6 +348,7 @@ class AnomalyEventViewSet(viewsets.ModelViewSet):
                 'confidence_score': float(anomaly.model_confidence),
                 'detected_at': anomaly.timestamp.isoformat(),
                 'field_plot_name': field_plot_name,  # Use safe access
+                'plot': plot_id,  # ADD THIS - plot ID for navigation
                 'sensor_reading_id': None,
                 'agent_recommendation': recommendation,
                 'resolved': False
@@ -374,6 +378,7 @@ class AnomalyEventViewSet(viewsets.ModelViewSet):
                 'confidence_score': float(anomaly.model_confidence),
                 'detected_at': anomaly.timestamp.isoformat(),
                 'field_plot_name': anomaly.plot.crop_variety if anomaly.plot else 'Unknown',
+                'plot': anomaly.plot.id if anomaly.plot else None,  # ADD THIS
                 'sensor_reading_id': None,
                 'agent_recommendation': recommendation,
                 'resolved': False
