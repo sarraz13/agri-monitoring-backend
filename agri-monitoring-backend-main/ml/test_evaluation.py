@@ -53,15 +53,18 @@ print(f"Precision: {precision:.2f}")
 print(f"Recall: {recall:.2f}")
 print(f"F1-score: {f1:.2f}")
 
-# Optional: Plot normal vs anomalies
-plt.figure(figsize=(10,6))
-# Scatter plot: X-axis = sample index, Y-axis = soil moisture, Color = prediction
-plt.scatter(range(len(X_test)), X_test[:,0], c=y_pred, cmap='coolwarm', label='Predicted Anomalies')
-plt.xlabel('Sample Index')
-plt.ylabel('Soil Moisture (%)')
-plt.title('ML Model Prediction (Red = Anomaly, Blue = Normal)')
-plt.legend()
-plt.tight_layout()
-# Save plot for documentation/report
-plt.savefig('evaluation_plot.png')  # Save plot for report
-plt.show() #show plot
+# Create a more informative visualization
+fig, ax1 = plt.subplots(1, 1, figsize=(12, 6))
+
+# Main prediction plot
+colors = ['blue' if pred == 0 else 'red' for pred in y_pred]
+ax1.scatter(range(len(X_test)), X_test[:, 0], c=colors, alpha=0.6, s=30)
+ax1.axvline(x=199.5, color='green', linestyle='--', alpha=0.5, label='Normal/Anomaly Boundary')
+ax1.set_xlabel('Sample Index')
+ax1.set_ylabel('Soil Moisture (%)')
+ax1.set_title('Model Predictions (0-199: Normal, 200-249: Anomaly)')
+ax1.legend()
+ax1.grid(True, alpha=0.3)
+
+plt.savefig('detailed_evaluation_plot.png', dpi=150, bbox_inches='tight')
+plt.show()
