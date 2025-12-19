@@ -1,8 +1,13 @@
+/*
+This is the BRIDGE between your Angular frontend and Django backend.
+Every time your Angular app needs data (farms, plots, sensor readings),
+it calls methods in this service, which talks to Django via HTTP.
+*/
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-// ------------------- TYPES ------------------- //
+// TYPES  //
 export interface DashboardStats {
   total_farms: number;
   total_plots: number;
@@ -13,15 +18,15 @@ export interface DashboardStats {
 export interface FieldPlot {
   id: number;
   crop_variety: string;
-  status: 'normal' | 'warning' | 'alert';
+  status: 'normal' | 'warning' | 'alert'; // Literal type - only these 3 values allowed
   anomaly_count: number;
   farm: number;
-  name?: string;
+  name?: string; // Optional field (might not exist)
 }
 
 export interface SensorReading {
   id: number;
-  timestamp: string;
+  timestamp: string; // ISO string like "2024-01-15T14:30:00"
   plot: number;
   sensor_type: 'temperature' | 'humidity' | 'soil_moisture';
   value: number;
@@ -47,30 +52,26 @@ export interface Recommendation {
   confidence?: number;          
 }
 
-// ------------------- SERVICE ------------------- //
+// SERVICE//
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root' //Marks this as a service Angular can inject into components
 })
 export class ApiService {
   private apiUrl = 'http://localhost:8000/api';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {} // Angular injects HttpClient automatically
 
   private getHeaders(): HttpHeaders {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('access_token'); // Get JWT from browser storage
     return new HttpHeaders({
       'Content-Type': 'application/json',
-      Authorization: token ? `Bearer ${token}` : ''
+      Authorization: token ? `Bearer ${token}` : '' // Add token if exists
     });
   }
 
-  // ------------------- AUTH ------------------- //
+  // Authentification endpoints//
   login(username: string, password: string): Observable<{ access: string }> {
-    return this.http.post<{ access: string }>(`${this.apiUrl}/token/`, { username, password });
-  }
-
-  register(userData: Record<string, any>): Observable<any> {
-    return this.http.post(`${this.apiUrl}/register/`, userData);
+    return this.http.post<{ access: string }>(`${this.apiUrl}/auth/login/`, { username, password });
   }
 
   logout(): void {
@@ -79,15 +80,16 @@ export class ApiService {
   }
 
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('access_token');
+    return !!localStorage.getItem('access_token'); // Double-bang converts to boolean
   }
 
-  // ------------------- DASHBOARD ------------------- //
+  //  DASHBOARD //
   getDashboardStats(): Observable<DashboardStats> {
-    return this.http.get<DashboardStats>(`${this.apiUrl}/dashboard/stats/`, { headers: this.getHeaders() });
+    return this.http.get<DashboardStats>(`${this.apiUrl}/dashboard/stats/`,
+       { headers: this.getHeaders() }); // Requires authentication
   }
 
-  // ------------------- FARMS ------------------- //
+  //  FARMS  //
   getFarms(): Observable<FieldPlot[]> {
     return this.http.get<FieldPlot[]>(`${this.apiUrl}/farms/`, { headers: this.getHeaders() });
   }
@@ -108,7 +110,7 @@ export class ApiService {
     return this.http.delete<void>(`${this.apiUrl}/farms/${id}/`, { headers: this.getHeaders() });
   }
 
-  // ------------------- PLOTS ------------------- //
+  //  PLOTS  //
   getPlots(): Observable<FieldPlot[]> {
     return this.http.get<FieldPlot[]>(`${this.apiUrl}/plots/`, { headers: this.getHeaders() });
   }
@@ -133,7 +135,7 @@ export class ApiService {
     return this.http.delete<void>(`${this.apiUrl}/plots/${id}/`, { headers: this.getHeaders() });
   }
 
-  // ------------------- SENSOR READINGS ------------------- //
+  // SENSOR READINGS //
   getSensorReadings(): Observable<SensorReading[]> {
     return this.http.get<SensorReading[]>(`${this.apiUrl}/sensor-readings/`, { headers: this.getHeaders() });
   }
@@ -146,7 +148,7 @@ export class ApiService {
     return this.http.post<SensorReading>(`${this.apiUrl}/sensor-readings/`, readingData, { headers: this.getHeaders() });
   }
 
-  // ------------------- ANOMALIES ------------------- //
+  //  ANOMALIES //
   getAnomalies(): Observable<Anomaly[]> {
     return this.http.get<Anomaly[]>(`${this.apiUrl}/anomalies/`, { headers: this.getHeaders() });
   }
@@ -159,15 +161,11 @@ export class ApiService {
     return this.http.post<Recommendation>(`${this.apiUrl}/anomalies/${anomalyId}/recommend/`, {}, { headers: this.getHeaders() });
   }
 
-  regenerateRecommendation(anomalyId: number): Observable<Recommendation> {
-    return this.http.post<Recommendation>(`${this.apiUrl}/anomalies/${anomalyId}/recommend/`, { force_regenerate: true }, { headers: this.getHeaders() });
-  }
-
   resolveAnomaly(anomalyId: number): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/anomalies/${anomalyId}/resolve/`, {}, { headers: this.getHeaders() });
   }
 
-  // ------------------- RECOMMENDATIONS ------------------- //
+  // RECOMMENDATIONS //
   getRecommendationsByAnomaly(anomalyId: number): Observable<Recommendation[]> {
     return this.http.get<Recommendation[]>(`${this.apiUrl}/recommendations/?anomaly=${anomalyId}`, { headers: this.getHeaders() });
   }

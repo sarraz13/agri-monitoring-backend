@@ -1,24 +1,28 @@
 """
-Enhanced AI Agent for Academic Project
-Generates deterministic recommendations based on anomaly types
-Follows project requirements: deterministic, template-based, uses model confidence
+AI AGENT - RECOMMENDATION ENGINE
+Generates agricultural recommendations based on detected anomalies.
+Rule-based system following project requirements.
 """
 from datetime import datetime
 from monitoring.models import AnomalyEvent
 
 class AgricultureAI:
     """
-    AI Agent that analyzes anomalies and generates recommendations
-    Follows project specifications:
+    AI Agent that analyzes anomalies and generates recommendations.
+    Design principles:
     - Deterministic rule-based system
     - Template-based explanations
     - Uses model confidence scores
-    - Lightweight Django app implementation
     """
     
     def __init__(self):
-        # Rule-based knowledge base with single recommended actions
-        # Matches project requirement: "simple rule-based agent" (Page 7)
+        ''' 
+         Knowledge base: Maps anomaly types to recommended actions
+         Each entry contains:
+         - recommended_action: Single best action to take
+         - explanation_template: Why this action is recommended
+         - base_confidence: Default confidence for this rule
+         - priority: How urgent this anomaly is'''
         self.knowledge_base = {
             'soil_moisture_low': {
                 'recommended_action': "Increase irrigation frequency by 30% for the next 3 days and check for leaks.",
@@ -78,37 +82,30 @@ class AgricultureAI:
     
     def generate_recommendation(self, anomaly_event):
         """
-        Generate recommendation for an anomaly event
-        Returns dict with ONLY fields that exist in AgentRecommendation model:
+        Generate recommendation for an anomaly event.
+        Returns dict with fields matching AgentRecommendation model:
         - recommended_action (TextField)
         - explanation_text (TextField)
         - confidence (FloatField)
-        
-        Follows project template structure (Page 9):
-        "On {timestamp} at {time}, sensor readings detected an **{anomaly_type}** 
-        (model confidence {score}). {Sensor trend}. Agent recommends {action}. 
-        Confidence: {level}."
         """
         try:
             anomaly_type = anomaly_event.anomaly_type
             severity = anomaly_event.severity
             
+            # Check if we have a rule for this anomaly type
             if anomaly_type not in self.knowledge_base:
                 # Default recommendation for unknown anomaly types
                 return self._generate_default_recommendation(anomaly_event)
             
             rule = self.knowledge_base[anomaly_type]
-            
-            # Build the recommended action (deterministic - no random choice)
+            # Build the recommended action (deterministic - not random)
             recommended_action = rule['recommended_action']
-            
-            # Build explanation following project template format
+            # Build explanation following the template format
             explanation_text = self._build_template_explanation(anomaly_event, rule)
-            
             # Calculate confidence: combine model confidence with rule base confidence
             confidence = self._calculate_confidence(anomaly_event.model_confidence, rule['base_confidence'], severity)
             
-            # Return ONLY the fields that exist in AgentRecommendation model
+            # Return the fields that exist in AgentRecommendation model
             return {
                 'recommended_action': recommended_action,
                 'explanation_text': explanation_text,
@@ -121,16 +118,19 @@ class AgricultureAI:
     
     def _build_template_explanation(self, anomaly_event, rule):
         """
-        Build explanation following the exact template from project (Page 9)
+        Build explanation following the exact template from project requirements.
+        Format: "On {timestamp} at {time}, sensor readings detected an **{anomaly_type}** 
+        (model confidence {score}). {Sensor trend}. Agent recommends {action}. 
+        Confidence: {level}."
         """
-        # Format timestamp as required
+        # Format timestamp
         timestamp_str = anomaly_event.timestamp.strftime("%Y-%m-%d at %H:%M")
         
         # Get model confidence (from anomaly detection ML model)
         model_confidence = anomaly_event.model_confidence
         
         # Get plot information for context
-        plot_name = "the plot"
+        plot_name = "the plot" #fallback
         if hasattr(anomaly_event, 'plot') and anomaly_event.plot:
             if hasattr(anomaly_event.plot, 'crop_variety') and anomaly_event.plot.crop_variety:
                 plot_name = anomaly_event.plot.crop_variety
@@ -138,7 +138,7 @@ class AgricultureAI:
         # Determine confidence level based on severity
         confidence_level = self._get_confidence_level(anomaly_event.severity)
         
-        # Build the template explanation (Page 9 format)
+        # Build the template explanation
         explanation = (
             f"On {timestamp_str}, sensor readings detected an **{anomaly_event.anomaly_type}** "
             f"on {plot_name} (model confidence: {model_confidence:.2f}). "
@@ -155,9 +155,9 @@ class AgricultureAI:
         Combines ML model confidence with rule base confidence
         Adjusts based on anomaly severity
         """
+
         # Weight: 60% from ML model, 40% from rule base
         base_score = (model_confidence * 0.6) + (rule_confidence * 0.4)
-        
         # Adjust based on severity (higher severity = higher confidence adjustment)
         severity_multiplier = {
             'low': 0.9,
@@ -172,9 +172,7 @@ class AgricultureAI:
         return min(max(confidence, 0.0), 1.0)
     
     def _get_confidence_level(self, severity):
-        """
-        Convert confidence score to human-readable level
-        """
+        #Convert confidence score to human-readable level
         return {
             'low': 'low',
             'medium': 'medium',
@@ -183,9 +181,7 @@ class AgricultureAI:
         }.get(severity, 'medium')
     
     def _generate_default_recommendation(self, anomaly_event):
-        """
-        Generate default recommendation for unknown anomaly types
-        """
+        """Generate default recommendation for unknown anomaly types"""
         timestamp_str = anomaly_event.timestamp.strftime("%Y-%m-%d at %H:%M")
         
         explanation = (

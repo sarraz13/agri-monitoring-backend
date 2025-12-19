@@ -1,42 +1,61 @@
 import numpy as np
 from sklearn.ensemble import IsolationForest
-import joblib
+import joblib # For saving/loading Python objects
 import os
 
+"""
+ML MODEL WRAPPER
+Loads, saves, and uses the trained Isolation Forest model.
+Provides a clean interface for inference.
+"""
+
 class MLModel:
+    """
+    Wrapper class for the ML model.
+    Handles loading, training, and prediction.
+    """
     def __init__(self, model_path=None):
+        """
+        Initialize ML model wrapper.
+        Args:
+            model_path: Path to saved model file. If None, uses default.
+        """
         if model_path is None:
-            # Go up from ml/ to project root, then to models/
+            # Default path: go up from ml/ to project root, then to models/
             BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             self.model_path = os.path.join(BASE_DIR, 'models', 'isolation_forest.pkl')
         else:
             self.model_path = model_path
-        self.model = None
-        self.load_model()
+        self.model = None # Will hold the actual sklearn model
+        self.load_model() # Try to load on initialization
 
     def load_model(self):
-        """Charge le modèle depuis le fichier"""
+        """Load model from disk if it exists."""
         try:
             if os.path.exists(self.model_path):
                 self.model = joblib.load(self.model_path)
             else:
-                print("⚠️  Modèle non trouvé. Entraînez avec: python manage.py train_model")
+                print("Model not found. Train with: python manage.py train_model")
                 self.model = None
         except Exception as e:
-            print(f"❌ Erreur chargement modèle: {e}")
+            print(f"Error loading model: {e}")
             self.model = None
     
     def train(self, save_path='isolation_forest.pkl'):
-        print("🧠 Entraînement du modèle ML (3 features)...")
+        """
+        Train a new model (alternative to train_model.py command).
+        Returns the trained model.
+        """
+        print("Training: (3 features)...")
         np.random.seed(42)
-        # 1. Données normales
+        # Normal data (80%)
         n_normal = 800
         X_normal = np.column_stack([
-            np.random.normal(60, 5, n_normal),    # Humidité sol
-            np.random.normal(24, 3, n_normal),    # Température
-            np.random.normal(65, 8, n_normal)     # Humidité air
+            np.random.normal(60, 5, n_normal),    # Moisture
+            np.random.normal(24, 3, n_normal),    # Temperature
+            np.random.normal(65, 8, n_normal)     # Humidity
         ])
-        # 2. Données anormales
+        # 2. Anomalies (20%)
         n_anomaly = 200
         X_anomaly = np.column_stack([
             np.random.uniform(20, 40, n_anomaly),    # Humidité basse
@@ -46,8 +65,8 @@ class MLModel:
         # 3. Combine
         X_train = np.vstack([X_normal, X_anomaly])
         np.random.shuffle(X_train)
-        print(f"📊 Dataset: {X_train.shape[0]} échantillons")
-        print(f"   Normales: {n_normal}, Anomalies: {n_anomaly}")
+        print(f" Dataset: {X_train.shape[0]} samples")
+        print(f" Normal: {n_normal}, Anomalies: {n_anomaly}")
         # 4. Entraînement
         self.model = IsolationForest(
             n_estimators=100,
@@ -55,21 +74,20 @@ class MLModel:
             random_state=42,
             n_jobs=-1
         )
-        print("⏳ Entraînement...")
+        print("Training...")
         self.model.fit(X_train)
         # 5. Sauvegarde
         os.makedirs(os.path.dirname(save_path) or '.', exist_ok=True)
         joblib.dump(self.model, save_path)
-        print(f"✅ Modèle sauvegardé: {save_path}")
-        print(f"   Features attendues: {self.model.n_features_in_}")
+        print(f"Model saved: {save_path}")
+        print(f" Expected features: {self.model.n_features_in_}")
         # 6. Validation
         self._validate_model()
         return self.model
     
     def _validate_model(self):
-        """Teste le modèle avec des cas connus"""
         if self.model is None:
-            print("❌ Modèle non disponible pour validation")
+            print("Model not available for validation")
             return
             
         test_cases = [
@@ -82,7 +100,7 @@ class MLModel:
             ([25, 36, 25], "Anomalie multiple"),
         ]
         
-        print("\n🧪 Validation du modèle:")
+        print("\nValidation du modèle:")
         for features, label in test_cases:
             try:
                 pred = self.model.predict([features])[0]
@@ -109,7 +127,7 @@ class MLModel:
             score = self.model.decision_function(features)[0]
             return (prediction == -1), float(score)
         except Exception as e:
-            print(f"⚠️  Erreur prédiction: {e}")
+            print(f"Erreur prédiction: {e}")
             return False, 0.0
 
 # Instance globale

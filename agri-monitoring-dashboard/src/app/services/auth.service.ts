@@ -1,35 +1,46 @@
-// auth.service.ts - FIXED VERSION
+/*
+WHAT THIS FILE IS:
+Manages user authentication state across the entire Angular app.
+Handles login, logout, token storage/refresh, and user role management.
+*/
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { tap, catchError, switchMap } from 'rxjs/operators';
 
+
+//TYPE DEFINITIONS//
 export interface User {
   id: number;
   username: string;
   email: string;
   first_name: string;
   last_name: string;
-  role: string;
+  role: string; // 'admin' or 'farmer'
   is_staff: boolean;
   is_superuser: boolean;
 }
 
 export interface LoginResponse {
-  access: string;
-  refresh: string;
+  access: string; // Short-lived access token (30 minutes)
+  refresh: string; // Long-lived refresh token (1 day)
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
+  // API endpoint
   private apiUrl = 'http://localhost:8000/api/auth'; // include 'auth'
+
+  // Storage keys
   private tokenKey = 'access_token';
   private refreshKey = 'refresh_token';
   private userKey = 'user_data';
   
+
+  // Observable state - components can subscribe to these
   public isLoggedIn$ = new BehaviorSubject<boolean>(false);
   public userRole$ = new BehaviorSubject<string>('');
   public currentUser$ = new BehaviorSubject<User | null>(null);
@@ -38,34 +49,50 @@ export class AuthService {
     private http: HttpClient,
     private router: Router
   ) {
-    this.checkTokenValidity();
+    this.checkTokenValidity(); // Check on app startup
   }
 
 
+
+  //login flow//
   login(username: string, password: string): Observable<any> {
+    /*
+    TWO-STEP LOGIN PROCESS:
+    1. Get JWT tokens (access + refresh)
+    2. Get user profile info
+    */
     return this.http.post<LoginResponse>(`${this.apiUrl}/login/`, {
       username,
       password
     }).pipe(
+      // switchMap: Use token to get user profile
       switchMap((tokenResponse: any) => {
         const accessToken = tokenResponse.access;
         const refreshToken = tokenResponse.refresh;
+
+        // Store tokens
         localStorage.setItem(this.tokenKey, accessToken);
         localStorage.setItem(this.refreshKey, refreshToken);
 
+        // Now get user info using the token
         return this.http.get<User>(`${this.apiUrl}/user/`, {
           headers: new HttpHeaders({
             'Authorization': `Bearer ${accessToken}`
           })
         }).pipe(
           tap((userInfo: User) => {
+            // Determine role
             const role = userInfo.is_staff || userInfo.is_superuser ? 'admin' : 'farmer';
             const userData: User = { ...userInfo, role };
+
+            // Store user data
             localStorage.setItem(this.userKey, JSON.stringify(userData));
+
+            // Update observables
             this.isLoggedIn$.next(true);
             this.userRole$.next(userData.role);
             this.currentUser$.next(userData);
-            this.router.navigate(['/dashboard']);
+            this.router.navigate(['/dashboard']);// Navigate to dashboard
           })
         );
       }),
@@ -76,32 +103,19 @@ export class AuthService {
   refreshToken(): Observable<any> {
     const refreshToken = localStorage.getItem(this.refreshKey);
     if (!refreshToken) {
-      this.logout();
+      this.logout(); // No refresh token = must login again
       return throwError(() => new Error('No refresh token'));
     }
 
     return this.http.post(`${this.apiUrl}/refresh/`, { refresh: refreshToken }).pipe(
       tap((response: any) => {
+        // Update access token
         localStorage.setItem(this.tokenKey, response.access);
         console.log('Token refreshed');
       }),
       catchError(error => {
         console.error('Token refresh failed:', error);
-        this.logout();
-        return throwError(() => error);
-      })
-    );
-  }
-
-
-  // Register method - Remove for now if not implemented
-  register(userData: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/register/`, userData).pipe(
-      tap(response => {
-        console.log('Registration successful:', response);
-      }),
-      catchError(error => {
-        console.error('Registration error:', error);
+        this.logout(); // Refresh failed = session expired
         return throwError(() => error);
       })
     );
@@ -109,15 +123,17 @@ export class AuthService {
 
   // Logout method
   logout(): void {
+    // Clear all stored data
     localStorage.removeItem(this.tokenKey);
     localStorage.removeItem(this.refreshKey);
     localStorage.removeItem(this.userKey);
     
+    // Update observables
     this.isLoggedIn$.next(false);
     this.userRole$.next('');
     this.currentUser$.next(null);
     
-    this.router.navigate(['/login']);
+    this.router.navigate(['/login']); // Redirect to login
   }
 
   // Get current user info
@@ -129,7 +145,7 @@ export class AuthService {
   // Get user role
   getUserRole(): string {
     const user = this.getCurrentUser();
-    return user?.role || '';
+    return user?.role || ''; // Optional chaining: if user is null, returns ''
   }
 
   // Check if user is admin

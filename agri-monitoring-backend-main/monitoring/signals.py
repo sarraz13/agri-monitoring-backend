@@ -1,58 +1,61 @@
-# monitoring/signals.py - FIXED
 """
-Simple signals for automatic AI recommendations - FIXED VERSION
+SIGNALS - AUTOMATIC EVENT HANDLING
+Triggers automatic processes when data changes.
+Uses Django's signal system.
 """
-from django.db.models.signals import post_save
-from django.dispatch import receiver
+
+from django.db.models.signals import post_save  # Signal sent after save
+from django.dispatch import receiver  # Decorator to connect signal handler
 from django.utils import timezone
 from .models import SensorReading, AnomalyEvent, AgentRecommendation
-from ml.inference import AnomalyDetector
-from .ai_agent import ai_agent
+from ml.inference import AnomalyDetector  # ML anomaly detection
+from .ai_agent import ai_agent  # AI recommendation generator
 
 @receiver(post_save, sender=SensorReading)
 def detect_anomaly_on_sensor_reading(sender, instance, created, **kwargs):
     """
     Automatically run ML anomaly detection when new sensor reading arrives
+    Triggered AFTER a SensorReading is saved.
     """
     if not created:
-        return  # Only for new readings
+        return  # Only for new readings NOT UPDATES
     
-    print(f"📡 New sensor reading: Plot {instance.plot_id}, Type: {instance.sensor_type}, Value: {instance.value}")
+    print(f"New sensor reading: Plot {instance.plot_id}, Type: {instance.sensor_type}, Value: {instance.value}")
     
-    # Wait a moment to ensure the reading is saved
+    # Small delay to ensure the reading si saved (lel database consistency)
     import time
     time.sleep(0.1)
     
     try:
-        # Use detect_for_plot which gets the LATEST readings properly
+        # Use detect_for_plot which gets the LATEST readings for all sensors
         detector = AnomalyDetector()
         result = detector.detect_for_plot(instance.plot_id)
         
         if result.get('is_anomaly', False):
             anomaly_type = result.get('anomaly_type', 'unknown')
             
-            # Don't create duplicate anomalies for the same type within 5 minutes
+            # Don't create duplicate anomalies for the same type within 1 minutes
             recent_duplicate = AnomalyEvent.objects.filter(
-                plot=instance.plot,
+                plot=instance.plot, #same plot
                 anomaly_type=anomaly_type,  # Must be EXACT match
                 timestamp__gte=timezone.now() - timezone.timedelta(minutes=1)  # Only 1 minute
             ).exists()
             
             if recent_duplicate:
-                print(f"⚠️ Similar anomaly recently detected, skipping duplicate")
+                print(f"Similar anomaly recently detected! -> Skipping duplicate")
                 return
             
-            # Determine severity
+            # Determine severity bel confidence score taa l ML
             score = result.get('score', 0.0)  # ML anomaly score (negative for anomalies)
             confidence = abs(score)
-            if score < -0.15:    # HIGH (was -0.2)
+            if score < -0.15:    # Very negative = high severity
                 severity = 'high'
-            elif score < -0.08:  # MEDIUM (was -0.1)
+            elif score < -0.08:  # Moderately negative = medium severity
                 severity = 'medium'
-            elif score < -0.03:  # LOW (was -0.05)
+            elif score < -0.03:  # Slightly negative = low severity
                 severity = 'low'
             else:
-                severity = 'low'
+                severity = 'low' #fallback
 
             
             # Create AnomalyEvent
@@ -63,29 +66,30 @@ def detect_anomaly_on_sensor_reading(sender, instance, created, **kwargs):
                 model_confidence=confidence
             )
             
-            print(f"🚨 Anomaly detected: {anomaly_type} (severity: {severity}, confidence: {confidence:.2f})")
+            print(f"Anomaly detected: {anomaly_type} (severity: {severity}, confidence: {confidence:.2f})")
             
         else:
-            print(f"✅ Reading normal - no anomaly detected")
+            print(f"Reading normal - no anomaly detected")
             
     except Exception as e:
-        print(f"❌ Error in anomaly detection: {e}")
+        print(f"Error in anomaly detection: {e}")
         import traceback
         traceback.print_exc()
 
 @receiver(post_save, sender=AnomalyEvent)
 def generate_ai_recommendation_on_anomaly(sender, instance, created, **kwargs):
     """
-    Automatically generate AI recommendation when anomaly is created
+    Automatically generate AI recommendation when anomaly is created.
+    Triggered AFTER an AnomalyEvent is saved.
     """
     if not created:
         return  # Only for new anomalies
     
-    print(f"🧠 AI Agent: Analyzing anomaly {instance.id} ({instance.anomaly_type})")
+    print(f"AI Agent: Analyzing anomaly {instance.id} ({instance.anomaly_type})")
     
-    # Check if recommendation already exists
+    # Check if recommendation already exists (prevents duplicates)
     if AgentRecommendation.objects.filter(anomaly_event=instance).exists():
-        print(f"⚠️ Recommendation already exists for anomaly {instance.id}")
+        print(f"Recommendation already exists for anomaly {instance.id}")
         return
     
     try:
@@ -100,10 +104,10 @@ def generate_ai_recommendation_on_anomaly(sender, instance, created, **kwargs):
             confidence=recommendation_data['confidence']
         )
         
-        print(f"✅ AI Recommendation generated for anomaly {instance.id}")
+        print(f"   AI Recommendation generated for anomaly {instance.id}")
         print(f"   Action: {recommendation_data['recommended_action'][:50]}...")
         
     except Exception as e:
-        print(f"❌ Error generating AI recommendation: {e}")
+        print(f"Error generating AI recommendation: {e}")
         import traceback
         traceback.print_exc()

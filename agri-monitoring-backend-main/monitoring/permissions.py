@@ -1,18 +1,18 @@
-# monitoring/permissions.py
 from rest_framework import permissions
 from .models import FarmProfile
+
+#Defines who can access what in the API
 
 class IsAdmin(permissions.BasePermission):
     """Allows access only to admin users or superusers."""
     def has_permission(self, request, view):
-        return request.user.is_authenticated and (
-            request.user.is_staff or 
-            request.user.is_superuser
-        )
+        # User must be authenticated AND be superuser
+        return request.user.is_authenticated and (request.user.is_superuser)
 
 class IsFarmer(permissions.BasePermission):
     """Allows access only to farmer users (non-staff)."""
     def has_permission(self, request, view):
+        # User must be authenticated AND NOT be staff or superuser
         return request.user.is_authenticated and not (
             request.user.is_staff or 
             request.user.is_superuser
@@ -21,6 +21,10 @@ class IsFarmer(permissions.BasePermission):
 class IsOwnerOrAdmin(permissions.BasePermission):
     """
     Farmers can only access their own farms, Admins can access all.
+    Logic:
+    1. Admin users (staff/superuser) can do anything
+    2. Farmers can only access their farms
+    3. Ownership is checked by foreign key relationships
     """
     def has_permission(self, request, view):
         # Anyone can try, object-level permissions will handle the rest
@@ -31,11 +35,11 @@ class IsOwnerOrAdmin(permissions.BasePermission):
         if request.user.is_staff or request.user.is_superuser:
             return True
         
-        # Check if object has owner field
+        #Check ownership based on object type
+        # For FarmProfile: check if user owns the farm
         if hasattr(obj, 'owner'):
             return obj.owner == request.user
-        
-        # For FieldPlot, check if user owns the farm
+        # For FieldPlot, check if farm user owns the farm
         if hasattr(obj, 'farm') and hasattr(obj.farm, 'owner'):
             return obj.farm.owner == request.user
         

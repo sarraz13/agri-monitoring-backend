@@ -1,15 +1,13 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-from django.contrib.postgres.fields import JSONField
-from django.core.serializers.json import DjangoJSONEncoder
 
-User = get_user_model()
+User = get_user_model()# Get the currently active User model
 
-# -------------------- Core Models -------------------- #
 
 class FarmProfile(models.Model):
     """
-    Core Django Model: FarmProfile
+    Represents a fram owned by a user 
+    Fields:
     - owner: User foreign key
     - location: CharField
     - size: FloatField (hectares)
@@ -17,8 +15,8 @@ class FarmProfile(models.Model):
     """
     owner = models.ForeignKey(
         User,
-        on_delete=models.CASCADE,
-        related_name="farms",
+        on_delete=models.CASCADE, # Delete farm if owner is deleted
+        related_name="farms", # User.farms gives all farms of a user
         verbose_name="Owner"
     )
     location = models.CharField(
@@ -35,9 +33,9 @@ class FarmProfile(models.Model):
     )
     
     class Meta:
-        verbose_name = "Farm Profile"
-        verbose_name_plural = "Farm Profiles"
-        ordering = ["owner_id", "location"]
+        verbose_name = "Farm Profile" # Human-readable name
+        verbose_name_plural = "Farm Profiles" # Plural name
+        ordering = ["owner_id", "location"] # Default ordering
 
     def __str__(self):
         return f"{self.crop_type} farm at {self.location} (id={self.id})"
@@ -45,14 +43,15 @@ class FarmProfile(models.Model):
 
 class FieldPlot(models.Model):
     """
-    Core Django Model: FieldPlot
-    - farm: FarmProfile foreign key
-    - crop_variety: CharField
+    Represents a specific plot within a farm.
+    Fields:
+        farm: ForeignKey to FarmProfile this plot belongs to
+        crop_variety: Specific variety of crop in this plot
     """
     farm = models.ForeignKey(
         FarmProfile,
-        on_delete=models.CASCADE,
-        related_name="plots",
+        on_delete=models.CASCADE,# Delete plot if farm is deleted
+        related_name="plots", # FarmProfile.plots gives all plots in a farm
         verbose_name="Farm"
     )
     crop_variety = models.CharField(
@@ -71,15 +70,16 @@ class FieldPlot(models.Model):
 
 class SensorReading(models.Model):
     """
-    Core Django Model: SensorReading
-    - timestamp: DateTimeField
-    - plot: FieldPlot foreign key
-    - sensor_type: choices (moisture, temperature, humidity)
-    - value: FloatField
-    - source: CharField (simulator)
+    Represents a single sensor reading from a plot.
+    Fields:
+        timestamp: When the reading was taken
+        plot: Which plot this reading is from
+        sensor_type: Type of sensor (moisture, temperature, humidity)
+        value: Numeric reading value
+        source: Where the data came from (simulator, real sensor, etc.)
     """
     SENSOR_TYPE_CHOICES = [
-        ("moisture", "Soil Moisture"),
+        ("moisture", "Soil Moisture"), # Database value: "moisture", Display: "Soil Moisture"
         ("temperature", "Air Temperature"),
         ("humidity", "Air Humidity"),
     ]
@@ -90,13 +90,13 @@ class SensorReading(models.Model):
     )
     plot = models.ForeignKey(
         FieldPlot,
-        on_delete=models.CASCADE,
-        related_name="sensor_readings",
+        on_delete=models.CASCADE, # Delete readings if plot is deleted
+        related_name="sensor_readings", # FieldPlot.sensor_readings gives all readings
         verbose_name="Field Plot"
     )
     sensor_type = models.CharField(
         max_length=20,
-        choices=SENSOR_TYPE_CHOICES,
+        choices=SENSOR_TYPE_CHOICES, # Limits to predefined choices
         verbose_name="Sensor Type"
     )
     value = models.FloatField(
@@ -104,7 +104,7 @@ class SensorReading(models.Model):
     )
     source = models.CharField(
         max_length=50,
-        default="simulator",
+        default="simulator", # Default value : source is the simulator
         help_text="Source of the data",
         verbose_name="Data Source"
     )
@@ -112,7 +112,7 @@ class SensorReading(models.Model):
     class Meta:
         verbose_name = "Sensor Reading"
         verbose_name_plural = "Sensor Readings"
-        ordering = ["-timestamp"]
+        ordering = ["-timestamp"] # Most recent reading first
 
     def __str__(self):
         return f"{self.get_sensor_type_display()}={self.value} at {self.timestamp}"
@@ -120,13 +120,15 @@ class SensorReading(models.Model):
 
 class AnomalyEvent(models.Model):
     """
-    Core Django Model: AnomalyEvent
-    - timestamp: DateTimeField (auto_now_add)
-    - plot: FieldPlot foreign key
-    - anomaly_type: CharField
-    - severity: choices (low, medium, high)
-    - model_confidence: FloatField (0-1)
+    Represents a detected anomaly in sensor data.
+    Fields:
+        timestamp: When the anomaly was detected
+        plot: Which plot has the anomaly
+        anomaly_type: Type of anomaly (soil_moisture_low, temperature_high, etc.)
+        severity: How severe the anomaly is
+        model_confidence: ML model's confidence in this detection (0-1)
     """
+    # Choices for severity field
     SEVERITY_CHOICES = [
         ("low", "Low"),
         ("medium", "Medium"),
@@ -140,7 +142,7 @@ class AnomalyEvent(models.Model):
     plot = models.ForeignKey(
         FieldPlot,
         on_delete=models.CASCADE,
-        related_name="anomalies",
+        related_name="anomalies", # FieldPlot.anomalies gives all anomalies for a plot
         verbose_name="Field Plot"
     )
     anomaly_type = models.CharField(
@@ -167,16 +169,16 @@ class AnomalyEvent(models.Model):
         return f"{self.anomaly_type} ({self.severity}) on plot {self.plot.id}"
 
 
-# -------------------- AI Agent Model -------------------- #
 
 class AgentRecommendation(models.Model):
     """
-    Academic Model: AgentRecommendation
-    - timestamp: DateTimeField (auto_now_add)
-    - anomaly_event: AnomalyEvent foreign key
-    - recommended_action: TextField
-    - explanation_text: TextField
-    - confidence: FloatField (0-1)
+    Represents an AI-generated recommendation for an anomaly.
+    Fields:
+        timestamp: When recommendation was generated
+        anomaly_event: Which anomaly this recommendation is for
+        recommended_action: What action to take
+        explanation_text: Why this action is recommended
+        confidence: AI's confidence in this recommendation (0-1)
     """
     timestamp = models.DateTimeField(
         auto_now_add=True,
@@ -185,7 +187,7 @@ class AgentRecommendation(models.Model):
     anomaly_event = models.ForeignKey(
         AnomalyEvent,
         on_delete=models.CASCADE,
-        related_name="recommendations",
+        related_name="recommendations", # AnomalyEvent.recommendations gives all recs
         verbose_name="Anomaly Event"
     )
     recommended_action = models.TextField(

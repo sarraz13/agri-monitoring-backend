@@ -321,21 +321,6 @@ export class PlotDetailsComponent implements OnInit, OnDestroy {
       error: (error) => {
         console.error('Error generating recommendation:', error);
         
-        // Fallback mock recommendation
-        const mockRecommendations = [
-          { action: 'Increase irrigation by 20% for 2 days', explanation: 'Low soil moisture detected', confidence: 0.8 },
-          { action: 'Reduce irrigation and check drainage', explanation: 'Excess soil moisture', confidence: 0.75 },
-          { action: 'Install temporary shade', explanation: 'High temperature stress', confidence: 0.7 },
-          { action: 'Monitor for frost protection', explanation: 'Low temperature alert', confidence: 0.65 }
-        ];
-        
-        const mockRec = mockRecommendations[Math.floor(Math.random() * mockRecommendations.length)];
-        
-        this.selectedAnomaly.agent_recommendation = {
-          recommended_action: mockRec.action,
-          explanation_text: mockRec.explanation,
-          confidence: mockRec.confidence
-        };
         
         this.selectedAnomaly.loadingRecommendation = false;
         this.cdr.detectChanges();

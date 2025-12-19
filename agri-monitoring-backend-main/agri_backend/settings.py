@@ -2,57 +2,54 @@ import os
 from pathlib import Path
 from datetime import timedelta
 import dj_database_url
+from dotenv import load_dotenv
+load_dotenv()
 
-
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Build paths fel project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-f5qgm3e60vr-c!-nt-lvn@hlw9w95^4#k@%lvn*-9vdlx8x7(1"
 
-# SECURITY WARNING: don't run with debug turned on in production!
+# SECURITY SETTINGS
+SECRET_KEY = os.environ.get('SECRET_KEY')
 DEBUG = True
+ALLOWED_HOSTS = [] #feragh khater juste localhost
 
-ALLOWED_HOSTS = []
 
-
-# Application definition
-
+# Applications
 INSTALLED_APPS = [
     'corsheaders',
-    'django.contrib.admin',
-    "django.contrib.auth",
+    'django.contrib.admin', #interface admin
+    "django.contrib.auth", #systeme d'auth
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "rest_framework",
-    'monitoring',
-    'ml',
+    "rest_framework", #rest API framework
+    'rest_framework_simplejwt',  # JWT authentication
+    'monitoring', #main app
+    'ml',#ml app
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
-    "django.middleware.security.SecurityMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'corsheaders.middleware.CorsMiddleware',  # Must be first for CORS
+    "django.middleware.security.SecurityMiddleware",  # Security features
+    "django.contrib.sessions.middleware.SessionMiddleware",  # Session handling
+    "django.middleware.common.CommonMiddleware",  # URL processing
+    "django.middleware.csrf.CsrfViewMiddleware",  # CSRF protection
+    "django.contrib.auth.middleware.AuthenticationMiddleware",  # User auth
+    "django.contrib.messages.middleware.MessageMiddleware",  # Messages
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",  # Clickjacking protection
 ]
 
-ROOT_URLCONF = "agri_backend.urls"
+ROOT_URLCONF = "agri_backend.urls" #main urls conf
 
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [],
-        "APP_DIRS": True,
+        "APP_DIRS": True, #no templates (Angular frontend)
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.debug",
@@ -67,11 +64,11 @@ TEMPLATES = [
 WSGI_APPLICATION = "agri_backend.wsgi.application"
 
 
-# Database
 
-# Database
+
+# Database (using env variables for security)
 DATABASE_URL = os.getenv("DATABASE_URL")
-
+#use URL wala kol variable wahadha
 if DATABASE_URL:
     DATABASES = {
         "default": dj_database_url.parse(DATABASE_URL, conn_max_age=600)
@@ -96,35 +93,34 @@ else:
             "Please set DATABASE_URL or DB_NAME, DB_USER, DB_PASSWORD environment variables."
         )
 
-STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
+#
+#STATIC & MEDIA FILES
+STATIC_URL = "/static/"  # URL prefix for static files
+STATIC_ROOT = BASE_DIR / "staticfiles"  # Where collectstatic puts files
 
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = "/media/"  # URL prefix for media files
+MEDIA_ROOT = BASE_DIR / "media"  # Where uploaded files are stored
 
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# REST Framework Configuration
+# REST Framework Config
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",  # Keep this first
+        "rest_framework_simplejwt.authentication.JWTAuthentication",  #JWT Tokens
     ),
-    "DEFAULT_PERMISSION_CLASSES": (  # ADD THIS
-        "rest_framework.permissions.IsAuthenticated",
+    "DEFAULT_PERMISSION_CLASSES": (   # Permission classes (applied to all views unless overridden)
+        "rest_framework.permissions.IsAuthenticated",# Require login for all endpoints
     ),
 }
 
 # JWT Configuration
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
-    "AUTH_HEADER_TYPES": ("Bearer",),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),  # Short-lived access token
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1), # Longer-lived refresh token
+    "AUTH_HEADER_TYPES": ("Bearer",), # Authorization: Bearer <token>
 }
 
 
 # Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -142,37 +138,28 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 # Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
-LANGUAGE_CODE = "en-us"
-
-TIME_ZONE = "UTC"
-
-USE_I18N = True
-
-USE_TZ = True
+LANGUAGE_CODE = "en-us"  # Default language
+TIME_ZONE = "UTC"  # Time zone for the database
+USE_I18N = True  # Internationalization support
+USE_TZ = True  # Time zone support
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
-STATIC_URL = "static/"
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # CORS Configuration
+# Controls which domains can access the API
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:4200",
-    "http://127.0.0.1:4200",
-    "http://localhost:8080",
+    "http://localhost:4200",  # Angular default port
+    "http://127.0.0.1:4200",  # Angular localhost
+    "http://localhost:8080",  # Alternative port
 ]
 
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = True # Allow cookies in CORS requests
 
+# Allowed headers in CORS requests
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',

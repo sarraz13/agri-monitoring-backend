@@ -18,6 +18,8 @@ class FarmProfileSerializer(serializers.ModelSerializer):
             "size",
             "crop_type",
         ]
+        # id: auto-generated primary key
+        # owner: user ID (foreign key)
 
 
 class FieldPlotSerializer(serializers.ModelSerializer):
@@ -28,6 +30,7 @@ class FieldPlotSerializer(serializers.ModelSerializer):
             "farm",
             "crop_variety",
         ]
+        # farm: farm ID (foreign key)
 
 
 class SensorReadingSerializer(serializers.ModelSerializer):
@@ -41,6 +44,7 @@ class SensorReadingSerializer(serializers.ModelSerializer):
             "value",
             "source",
         ]
+        # plot: plot ID (foreign key)
 
 
 class AnomalyEventSerializer(serializers.ModelSerializer):
@@ -54,9 +58,11 @@ class AnomalyEventSerializer(serializers.ModelSerializer):
             "severity",
             "model_confidence",
         ]
+        # plot: plot ID (foreign key)
 
 
 class AgentRecommendationSerializer(serializers.ModelSerializer):
     class Meta:
         model = AgentRecommendation
         fields = '__all__'
+        # Include all fields

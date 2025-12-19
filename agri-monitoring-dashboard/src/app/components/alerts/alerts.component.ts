@@ -127,8 +127,7 @@ export class AlertsComponent implements OnInit, OnDestroy {
       error: (error) => {
         console.error('Error generating recommendation:', error);
         
-        // Fallback to mock recommendation
-        anomaly.agent_recommendation = this.getMockRecommendation(anomaly);
+        
         anomaly.loadingRecommendation = false;
         this.processingAnomalies.delete(anomaly.id);
         
@@ -179,86 +178,9 @@ export class AlertsComponent implements OnInit, OnDestroy {
     };
   }
 
-  private getMockRecommendation(anomaly: any): any {
-    // Consistent mock recommendations based on anomaly type
-    const type = anomaly.anomaly_type?.toLowerCase() || '';
-    const severity = anomaly.severity || 'medium';
     
-    const mockRecommendations = [
-      {
-        condition: type.includes('moisture') && type.includes('low'),
-        action: 'Increase irrigation by 20-30% for the next 48 hours',
-        explanation: 'Soil moisture below optimal range. Plants showing early signs of water stress.',
-        confidence: 0.85
-      },
-      {
-        condition: type.includes('moisture') && type.includes('high'),
-        action: 'Stop irrigation immediately and improve drainage systems',
-        explanation: 'Excess soil moisture detected. Risk of root rot and fungal diseases.',
-        confidence: 0.82
-      },
-      {
-        condition: type.includes('temperature') && type.includes('high'),
-        action: 'Deploy shade nets and increase irrigation frequency',
-        explanation: 'High temperature stress detected. Crops at risk of heat damage.',
-        confidence: 0.8
-      },
-      {
-        condition: type.includes('temperature') && type.includes('low'),
-        action: 'Activate frost protection and reduce irrigation',
-        explanation: 'Low temperature alert. Protect sensitive crops from frost damage.',
-        confidence: 0.78
-      },
-      {
-        condition: type.includes('humidity') && type.includes('high'),
-        action: 'Improve ventilation and monitor for fungal diseases',
-        explanation: 'High humidity promotes fungal growth and reduces transpiration.',
-        confidence: 0.75
-      }
-    ];
     
-    // Find matching recommendation
-    const matchedRec = mockRecommendations.find(rec => rec.condition);
-    
-    if (matchedRec) {
-      return {
-        recommended_action: matchedRec.action,
-        explanation_text: matchedRec.explanation,
-        confidence: matchedRec.confidence,
-        timestamp: new Date().toISOString(),
-        source: 'ai_agent_mock'
-      };
-    }
-    
-    // Default recommendation based on severity
-    const defaultActions = {
-      high: {
-        action: 'Immediate field inspection required. Consider emergency measures.',
-        explanation: 'Critical anomaly detected. High impact on crop health.',
-        confidence: 0.9
-      },
-      medium: {
-        action: 'Schedule inspection within 24 hours and adjust practices.',
-        explanation: 'Moderate risk anomaly. Monitor closely.',
-        confidence: 0.75
-      },
-      low: {
-        action: 'Monitor trend and adjust during next regular maintenance.',
-        explanation: 'Minor anomaly. Low immediate risk.',
-        confidence: 0.65
-      }
-    };
-    
-    const defaultRec = defaultActions[severity as keyof typeof defaultActions] || defaultActions.medium;
-    
-    return {
-      recommended_action: defaultRec.action,
-      explanation_text: defaultRec.explanation,
-      confidence: defaultRec.confidence,
-      timestamp: new Date().toISOString(),
-      source: 'ai_agent_mock'
-    };
-  }
+     
 
   // ==================== TEMPLATE HELPERS ====================
   
